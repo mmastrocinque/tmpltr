@@ -87,53 +87,78 @@ func generateNushellCompletion(out *os.File) error {
 # Save this file as tmpltr-completions.nu and source it in your config.nu
 
 export extern "tmpltr" [
-    --help(-h)                    # Show help
+    --help(-h)                    # Show help information
 ]
 
 export extern "tmpltr make" [
-    path: string                  # Target directory path
-    --name(-n): string           # Template name (required)
-    --ignore-contents            # Only save file structure, ignore contents
-    --ignore-files: list<string> # Files/patterns to ignore
-    --no-compression             # Disable compression
-    --help(-h)                   # Show help
+    path: string                  # Target directory path to create template from
+    --name(-n): string@"nu-complete tmpltr template-names-new"  # Template name (required)
+    --ignore-contents            # Only save file structure, ignore file contents
+    --ignore-files: list<string> # Files/patterns to ignore (comma-separated)
+    --no-compression             # Disable compression of stored files
+    --help(-h)                   # Show help for make command
 ]
 
 export extern "tmpltr restore" [
-    --name(-n): string           # Template name to restore (required)
-    --output(-o): string         # Output directory path (required)
-    --help(-h)                   # Show help
+    --name(-n): string@"nu-complete tmpltr template-names"  # Template name to restore (required)
+    --output(-o): string         # Output directory path where template will be restored (required)
+    --help(-h)                   # Show help for restore command
 ]
 
 export extern "tmpltr list" [
-    --help(-h)                   # Show help
+    --help(-h)                   # Show help for list command
 ]
 
 export extern "tmpltr delete" [
-    --name(-n): string           # Template name to delete (required)
-    --force(-f)                  # Skip confirmation prompt
-    --help(-h)                   # Show help
+    --name(-n): string@"nu-complete tmpltr template-names"  # Template name to delete (required)
+    --force(-f)                  # Skip confirmation prompt and delete immediately
+    --help(-h)                   # Show help for delete command
 ]
 
 export extern "tmpltr completion" [
-    shell: string@"nu-complete tmpltr completion shells"  # Shell type
-    --help(-h)                   # Show help
+    shell: string@"nu-complete tmpltr completion shells"  # Shell type to generate completions for
+    --help(-h)                   # Show help for completion command
 ]
 
 def "nu-complete tmpltr completion shells" [] {
-    ["bash", "zsh", "fish", "powershell", "nushell"]
+    [
+        {value: "bash", description: "Bash shell completion"},
+        {value: "zsh", description: "Zsh shell completion"},
+        {value: "fish", description: "Fish shell completion"}, 
+        {value: "powershell", description: "PowerShell completion"},
+        {value: "nushell", description: "Nushell completion"}
+    ]
+}
+
+def "nu-complete tmpltr template-names" [] {
+    try {
+        ^tmpltr list | lines | each { |line|
+            # Look for lines that start with 📁 (template names)
+            if ($line | str starts-with "📁 ") {
+                let name = ($line | str replace "📁 " "" | str trim)
+                {value: $name, description: "Template"}
+            }
+        } | where value != null
+    } catch {
+        []
+    }
+}
+
+def "nu-complete tmpltr template-names-new" [] {
+    # For make command, we don't show existing templates since we're creating new ones
+    []
 }
 
 export extern "tmpltr help" [
-    command?: string             # Command to get help for
-    --help(-h)                   # Show help
+    command?: string             # Command to get detailed help information for
+    --help(-h)                   # Show help for help command
 ]
 `
 	_, err := out.WriteString(nushellScript)
 	return err
 }
 
-// templateNameCompletion provides completion for template names
+// templateNameCompletion provides completion for template names with descriptions
 func templateNameCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	storage, err := storage.NewStorage("")
 	if err != nil {
@@ -145,7 +170,22 @@ func templateNameCompletion(cmd *cobra.Command, args []string, toComplete string
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	return templates, cobra.ShellCompDirectiveNoFileComp
+	// For shells that support descriptions, provide template info
+	var completions []string
+	for _, templateName := range templates {
+		// Try to load manifest to get template info for description
+		if manifest, err := storage.LoadManifest(templateName); err == nil {
+			fileCount := manifest.GetFileCount()
+			createdAt := manifest.CreatedAt.Format("2006-01-02")
+			description := fmt.Sprintf("%s\t%d files, created %s", templateName, fileCount, createdAt)
+			completions = append(completions, description)
+		} else {
+			// Fallback to just the name if manifest can't be loaded
+			completions = append(completions, templateName)
+		}
+	}
+
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }
 
 func init() {
