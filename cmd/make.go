@@ -45,6 +45,11 @@ func init() {
 	makeCmd.Flags().StringSliceVar(&ignoreFiles, "ignore-files", []string{}, "Comma-separated list of files/patterns to ignore")
 	makeCmd.Flags().BoolVar(&noCompression, "no-compression", false, "Disable compression of file contents")
 	makeCmd.MarkFlagRequired("name")
+	
+	// Add completion for directory arguments
+	makeCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return nil, cobra.ShellCompDirectiveFilterDirs
+	}
 }
 
 // runMake executes the make command logic

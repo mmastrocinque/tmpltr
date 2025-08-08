@@ -34,6 +34,12 @@ func init() {
 	restoreCmd.Flags().StringVarP(&outputDirectory, "output", "o", "", "Output directory path (required)")
 	restoreCmd.MarkFlagRequired("name")
 	restoreCmd.MarkFlagRequired("output")
+	
+	// Add completion for template names and directories
+	restoreCmd.RegisterFlagCompletionFunc("name", templateNameCompletion)
+	restoreCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return nil, cobra.ShellCompDirectiveFilterDirs
+	})
 }
 
 // runRestore executes the restore command logic

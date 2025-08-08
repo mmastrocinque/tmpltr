@@ -1,7 +1,3 @@
-Absolutely! Here's the **updated and complete spec doc** for your Go-based CLI tool `tmpltr`, now including the refined hashing section and an updated `manifest.json` schema to reflect the lookup-based use of hashes.
-
----
-
 ## 📄 Specification Document: `tmpltr`
 
 ### 🧩 Overview
@@ -134,6 +130,3 @@ tmpltr delete --name="<template_name>"
 - **File I/O:** `os`, `io`, `path/filepath`
 - **JSON Handling:** `encoding/json`
 
----
-
-Would you like to move on to the initial Go module setup and folder structure next? Or start implementing the `make` command logic?

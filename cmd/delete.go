@@ -33,6 +33,9 @@ func init() {
 	deleteCmd.Flags().StringVarP(&deleteTemplateName, "name", "n", "", "Name of the template to delete (required)")
 	deleteCmd.Flags().BoolVarP(&forceDelete, "force", "f", false, "Skip confirmation prompt")
 	deleteCmd.MarkFlagRequired("name")
+	
+	// Add completion for template names
+	deleteCmd.RegisterFlagCompletionFunc("name", templateNameCompletion)
 }
 
 // runDelete executes the delete command logic
