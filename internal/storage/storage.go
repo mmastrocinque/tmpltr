@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"tmpltr/internal/compression"
 	"tmpltr/internal/manifest"
 )
 
@@ -88,6 +89,40 @@ func (s *Storage) SaveFile(templateName, hash string, content []byte) error {
 	return nil
 }
 
+// SaveFileWithCompression saves file content to storage with optional compression
+func (s *Storage) SaveFileWithCompression(templateName, hash, originalPath string, content []byte) (bool, int64, error) {
+	filePath := s.GetFileContentPath(templateName, hash)
+	originalSize := int64(len(content))
+	
+	// Determine if we should compress
+	shouldCompress := compression.ShouldCompress(content, originalPath)
+	
+	var finalContent []byte
+	var err error
+	
+	if shouldCompress {
+		finalContent, err = compression.CompressData(content)
+		if err != nil {
+			return false, originalSize, fmt.Errorf("failed to compress content: %w", err)
+		}
+		
+		// Only use compression if it actually reduces size
+		if len(finalContent) >= len(content) {
+			finalContent = content
+			shouldCompress = false
+		}
+	} else {
+		finalContent = content
+	}
+	
+	err = os.WriteFile(filePath, finalContent, 0644)
+	if err != nil {
+		return false, originalSize, fmt.Errorf("failed to save file with hash %s: %w", hash, err)
+	}
+
+	return shouldCompress, int64(len(finalContent)), nil
+}
+
 // LoadFile loads file content from storage by hash
 func (s *Storage) LoadFile(templateName, hash string) ([]byte, error) {
 	filePath := s.GetFileContentPath(templateName, hash)
@@ -95,6 +130,26 @@ func (s *Storage) LoadFile(templateName, hash string) ([]byte, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load file with hash %s: %w", hash, err)
+	}
+
+	return content, nil
+}
+
+// LoadFileWithDecompression loads file content from storage and decompresses if needed
+func (s *Storage) LoadFileWithDecompression(templateName, hash string, isCompressed bool) ([]byte, error) {
+	filePath := s.GetFileContentPath(templateName, hash)
+	
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load file with hash %s: %w", hash, err)
+	}
+
+	if isCompressed {
+		decompressed, err := compression.DecompressData(content)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decompress file with hash %s: %w", hash, err)
+		}
+		return decompressed, nil
 	}
 
 	return content, nil

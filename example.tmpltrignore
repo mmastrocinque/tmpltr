@@ -1,0 +1,24 @@
+# Example .tmpltrignore file
+# This file demonstrates how to ignore specific files and patterns
+
+# Ignore specific files
+config.local.json
+secrets.env
+
+# Ignore by extension
+*.log
+*.tmp
+*.cache
+
+# Ignore directories
+node_modules/
+.git/
+dist/
+build/
+
+# Ignore with wildcards
+temp-*
+backup_*
+
+# Comments are supported (lines starting with #)
+# Empty lines are ignored

@@ -145,8 +145,8 @@ func restoreFile(fileEntry manifest.FileEntry, outputDir string, storage *storag
 	}
 
 	if fileEntry.IncludeContents {
-		// Load file content from storage
-		content, err := storage.LoadFile(restoreTemplateName, fileEntry.Hash)
+		// Load file content from storage with decompression if needed
+		content, err := storage.LoadFileWithDecompression(restoreTemplateName, fileEntry.Hash, fileEntry.Compressed)
 		if err != nil {
 			return fmt.Errorf("failed to load file content for %s: %w", fileEntry.OriginalPath, err)
 		}

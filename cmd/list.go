@@ -24,11 +24,14 @@ Example:
 
 // TemplateInfo holds template information for display
 type TemplateInfo struct {
-	Name           string
-	CreatedAt      time.Time
-	FileCount      int
-	ContentFiles   int
-	StructureFiles int
+	Name            string
+	CreatedAt       time.Time
+	FileCount       int
+	ContentFiles    int
+	StructureFiles  int
+	CompressedFiles int
+	OriginalSize    int64
+	StoredSize      int64
 }
 
 // runList executes the list command logic
@@ -88,13 +91,17 @@ func getTemplateInfo(templateName string, storage *storage.Storage) (TemplateInf
 	contentFiles := len(manifest.GetFilesWithContents())
 	totalFiles := manifest.GetFileCount()
 	structureFiles := totalFiles - contentFiles
+	compressedFiles, originalSize, storedSize := manifest.GetCompressionStats()
 
 	return TemplateInfo{
-		Name:           manifest.Name,
-		CreatedAt:      manifest.CreatedAt,
-		FileCount:      totalFiles,
-		ContentFiles:   contentFiles,
-		StructureFiles: structureFiles,
+		Name:            manifest.Name,
+		CreatedAt:       manifest.CreatedAt,
+		FileCount:       totalFiles,
+		ContentFiles:    contentFiles,
+		StructureFiles:  structureFiles,
+		CompressedFiles: compressedFiles,
+		OriginalSize:    originalSize,
+		StoredSize:      storedSize,
 	}, nil
 }
 
@@ -119,6 +126,15 @@ func displayTemplates(templates []TemplateInfo) {
 			fmt.Printf(" (structure only)")
 		}
 		fmt.Println()
+
+		// Show compression info if applicable
+		if template.CompressedFiles > 0 {
+			compressionRatio := (1.0 - float64(template.StoredSize)/float64(template.OriginalSize)) * 100
+			fmt.Printf("   Storage: %.1f KB (%.1f%% compression, %d files compressed)\n",
+				float64(template.StoredSize)/1024, compressionRatio, template.CompressedFiles)
+		} else if template.ContentFiles > 0 {
+			fmt.Printf("   Storage: %.1f KB (uncompressed)\n", float64(template.StoredSize)/1024)
+		}
 
 		// Show relative time
 		now := time.Now()
